@@ -98,7 +98,29 @@ val heap_ok_def = Define `
     (* all pointers in DataElements point to some DataElement *)
     (!ptr xs l d u. MEM (DataElement xs l d) heap /\ MEM (Pointer ptr u) xs ==>
                     isSomeDataElement (heap_lookup ptr heap))`;
-(* add that all references are stored at the end of the heap *)
+
+
+(* assume heap_ok? for now, yes *)
+(* old generations 0-a *)
+(* current generation a-b *)
+(* references b-limit *)
+(* add that all references h2 are at end? or should that happen afterwards? *)
+val heap_gen_ok_def = Define `
+  heap_gen_ok (a, b) isRef heap limit =
+    ?h1 h2 h3.
+      (a < b) /\ (b <= limit) /\
+      ((h1, h2, h3) = heap_segment (a, b) heap) /\
+      (* h1 points only to itself and references *)
+      (!ptr xs l d u.
+        MEM (DataElement xs l d) h1 /\ MEM (Pointer ptr u) xs ==>
+          (ptr < a \/ ptr >= b)) /\
+      (* h1 contains no references *)
+      (!el. MEM el h1 ==> ~ (isRef el)) /\
+      (* h3 only contains references *)
+      (!el. MEM el h3 ==> isRef el)
+  `;
+
+
 
 (* split heap into two 0-a, a-limit *)
 val heap_split_def = Define `
@@ -112,10 +134,12 @@ val heap_split_def = Define `
 
 (* segment heap into three 0-a, a-b, b-limit *)
 (* where a-b should could be the young generation *)
+(* in a generational garbage collector *)
 val heap_segment_def = Define `
   heap_segment (a, b) heap =
     let (h1, heap') = heap_split a heap
-    in let (h2, h3) = heap_split (b - a) heap'
+    in let l = heap_length h1
+    in let (h2, h3) = heap_split (b - l) heap'
     in (h1, h2, h3)`;
 
 (* The GC is a copying collector which moves elements *)
@@ -218,7 +242,8 @@ val heaps_similar_def = Define `
                      (el_length h = el_length h0) /\ isDataElement h0
                    else (h = h0)) heap0 heap`
 
-(* the new heap == h1 ++ h2, and heap. old heap is heap0 *)
+(* new heap is heap, old is heap0 *)
+(* h1 are moved elements, h2 can contain pointers to old heap *)
 val gc_inv_def = Define `
   gc_inv (h1,h2,a,n,heap,c,limit) heap0 =
     (a + n = limit) /\
