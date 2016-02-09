@@ -334,7 +334,7 @@ val NOT_IN_heap_map = prove(
 
 val isSomeDataOrForward_lemma = prove(
   ``!ha ptr.
-      isSomeDataOrForward (heap_lookup ptr (ha ++ [DataElement ys l d] ++ hb)) <=>
+      isSomeDataOrForward (heap_lookup ptr (ha ++ DataElement ys l d::hb)) <=>
       isSomeDataOrForward (heap_lookup ptr (ha ++ [ForwardPointer a u l] ++ hb))``,
   Induct \\ full_simp_tac std_ss [APPEND,heap_lookup_def]
   \\ SRW_TAC [] [] \\ full_simp_tac std_ss []
