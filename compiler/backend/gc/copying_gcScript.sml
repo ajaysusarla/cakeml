@@ -48,9 +48,6 @@ val INJ_UPDATE = store_thm("INJ_UPDATE",
 (* The ML heap is represented as a list of heap_elements. *)
 
 val _ = Datatype `
-  tag = BlockTag num | RefTag | BytesTag num | NumTag bool`;
-
-val _ = Datatype `
   heap_address = Pointer num 'a | Data 'a`;
 
 val _ = Datatype `
