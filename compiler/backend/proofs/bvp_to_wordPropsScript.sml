@@ -8,9 +8,6 @@ val get_lowerbits_def = Define `
   (get_lowerbits conf (Word w) = ((((shift_length conf - 1) -- 0) w) || 1w)) /\
   (get_lowerbits conf _ = 1w)`;
 
-val _ = Datatype `
-  tag = BlockTag num | RefTag | BytesTag num | NumTag bool`;
-
 val BlockRep_def = Define `
   BlockRep tag xs = DataElement xs (LENGTH xs) (BlockTag tag,[])`;
 
@@ -135,6 +132,7 @@ val reachable_refs_def = Define `
 
 val RefBlock_def = Define `
   RefBlock xs = DataElement xs (LENGTH xs) (RefTag,[])`;
+
 
 val bc_ref_inv_def = Define `
   bc_ref_inv conf n refs (f,heap,be) =

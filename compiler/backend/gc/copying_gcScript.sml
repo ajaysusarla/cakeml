@@ -1,4 +1,7 @@
-open preamble wordsTheory wordsLib integer_wordTheory;
+open preamble;
+open wordsTheory;
+open wordsLib;
+open integer_wordTheory;
 
 val _ = new_theory "copying_gc";
 
@@ -49,11 +52,14 @@ val _ = Datatype `
 
 val _ = Datatype `
   heap_element = Unused num
+               (*  *)
                | ForwardPointer num 'a num
+               (* pointers and more data; length; payload  *)
                | DataElement (('a heap_address) list) num 'b`;
+(* references in DataElement *)
+(* add another type which is Reference num 'a ? *)
 
 (* The heap is accessed using the following lookup function. *)
-
 val el_length_def = Define `
   (el_length (Unused l) = l+1) /\
   (el_length (ForwardPointer n d l) = l+1) /\
@@ -76,6 +82,7 @@ val isSomeDataElement_def = Define `
 val heap_length_def = Define `
   heap_length heap = SUM (MAP el_length heap)`;
 
+(* roots are ok if they are a pointer they point to some DataElement *)
 val roots_ok_def = Define `
   roots_ok roots heap =
     !ptr u. MEM (Pointer ptr u) roots ==> isSomeDataElement (heap_lookup ptr heap)`;
@@ -87,13 +94,18 @@ val isForwardPointer_def = Define `
 val heap_ok_def = Define `
   heap_ok heap limit =
     (heap_length heap = limit) /\
+    (* no forward pointers *)
     (FILTER isForwardPointer heap = []) /\
+    (* all pointers in DataElements point to some DataElement *)
     (!ptr xs l d u. MEM (DataElement xs l d) heap /\ MEM (Pointer ptr u) xs ==>
                     isSomeDataElement (heap_lookup ptr heap))`;
+(* add that all references are stored at the end of the heap *)
+
 
 (* The GC is a copying collector which moves elements *)
 
 val gc_forward_ptr_def = Define `
+  (* replace cell at a with a forwardpointer to ptr *)
   (gc_forward_ptr a [] ptr d c = ([],F)) /\
   (gc_forward_ptr a (x::xs) ptr d c =
      if a = 0 then
@@ -106,12 +118,15 @@ val gc_move_def = Define `
   (gc_move (Data d,h2,a,n,heap,c,limit) = (Data d,h2,a,n,heap,c)) /\
   (gc_move (Pointer ptr d,h2,a,n,heap,c,limit) =
      case heap_lookup ptr heap of
+     (* put data last on new heap, put fwd pointer on old heap *)
+     (* a is end of new heap, where new element is stored *)
      | SOME (DataElement xs l dd) =>
          let c = c /\ l+1 <= n /\ (a + n = limit) in
          let n = n - (l+1) in
          let h2 = h2 ++ [DataElement xs l dd] in
          let (heap,c) = gc_forward_ptr ptr heap a d c in
            (Pointer a d,h2,a + (l+1),n,heap,c)
+     (* if fwd pointer use new address *)
      | SOME (ForwardPointer ptr _ l) => (Pointer ptr d,h2,a,n,heap,c)
      | _ => (ARB,h2,a,n,heap,F))`
 
@@ -187,6 +202,7 @@ val heaps_similar_def = Define `
                      (el_length h = el_length h0) /\ isDataElement h0
                    else (h = h0)) heap0 heap`
 
+(* the new heap == h1 ++ h2, and heap. old heap is heap0 *)
 val gc_inv_def = Define `
   gc_inv (h1,h2,a,n,heap,c,limit) heap0 =
     (a + n = limit) /\
@@ -266,6 +282,7 @@ val IN_heap_map_IMP = prove(
   \\ rpt strip_tac \\ res_tac
   \\ full_simp_tac (srw_ss()) [heap_length_def,el_length_def] \\ decide_tac);
 
+(* an address is not in heap_map if there is a DataElement on that position in the heap *)
 val NOT_IN_heap_map = prove(
   ``!ha n. ~(n + heap_length ha IN FDOM (heap_map n (ha ++ DataElement ys l d::hb)))``,
   Induct \\ full_simp_tac (srw_ss()) [heap_map_def,APPEND,heap_length_def]
@@ -278,7 +295,7 @@ val NOT_IN_heap_map = prove(
 
 val isSomeDataOrForward_lemma = prove(
   ``!ha ptr.
-      isSomeDataOrForward (heap_lookup ptr (ha ++ DataElement ys l d::hb)) <=>
+      isSomeDataOrForward (heap_lookup ptr (ha ++ [DataElement ys l d] ++ hb)) <=>
       isSomeDataOrForward (heap_lookup ptr (ha ++ [ForwardPointer a u l] ++ hb))``,
   Induct \\ full_simp_tac std_ss [APPEND,heap_lookup_def]
   \\ SRW_TAC [] [] \\ full_simp_tac std_ss []
