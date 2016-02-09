@@ -48,16 +48,18 @@ val INJ_UPDATE = store_thm("INJ_UPDATE",
 (* The ML heap is represented as a list of heap_elements. *)
 
 val _ = Datatype `
+  tag = BlockTag num | RefTag | BytesTag num | NumTag bool`;
+
+val _ = Datatype `
   heap_address = Pointer num 'a | Data 'a`;
 
 val _ = Datatype `
   heap_element = Unused num
                (*  *)
                | ForwardPointer num 'a num
-               (* pointers and more data; length; payload  *)
+               (* pointers and more data; length; data  *)
                | DataElement (('a heap_address) list) num 'b`;
 (* references in DataElement *)
-(* add another type which is Reference num 'a ? *)
 
 (* The heap is accessed using the following lookup function. *)
 val el_length_def = Define `
@@ -78,6 +80,9 @@ val isDataElement_def = Define `
 
 val isSomeDataElement_def = Define `
   isSomeDataElement x = ?ys l d. x = SOME (DataElement ys l d)`;
+
+val isRef_def = Define `
+  isRef x = ?ys l d. x = DataElement ys l (RefTag, d)`;
 
 val heap_length_def = Define `
   heap_length heap = SUM (MAP el_length heap)`;
