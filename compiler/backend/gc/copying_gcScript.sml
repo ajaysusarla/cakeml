@@ -100,6 +100,9 @@ val heap_ok_def = Define `
                     isSomeDataElement (heap_lookup ptr heap))`;
 
 (* split heap into two 0-a, a-limit *)
+(* fail if a is not a "good location", *)
+(* meaning it is at some heap element not "between"? *)
+(* return option type? *)
 val heap_split_def = Define `
   (heap_split 0 heap = ([], heap)) /\
   (heap_split a (el::heap) =
@@ -123,8 +126,8 @@ val heap_segment_def = Define `
 (* old generations 0-a *)
 (* current generation a-b *)
 (* references b-limit *)
-(* add that all references h2 are at end?
- * or perhaps, after gc move b left and then this holds *)
+(* add that all references h2 are at end? *)
+(* or perhaps, after gc move b left and then this holds *)
 val heap_gen_ok_def = Define `
   heap_gen_ok (a, b) isRef heap limit =
     ?h1 h2 h3.
