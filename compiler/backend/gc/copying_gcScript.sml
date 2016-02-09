@@ -99,29 +99,6 @@ val heap_ok_def = Define `
     (!ptr xs l d u. MEM (DataElement xs l d) heap /\ MEM (Pointer ptr u) xs ==>
                     isSomeDataElement (heap_lookup ptr heap))`;
 
-
-(* assume heap_ok? for now, yes *)
-(* old generations 0-a *)
-(* current generation a-b *)
-(* references b-limit *)
-(* add that all references h2 are at end? or should that happen afterwards? *)
-val heap_gen_ok_def = Define `
-  heap_gen_ok (a, b) isRef heap limit =
-    ?h1 h2 h3.
-      (a < b) /\ (b <= limit) /\
-      ((h1, h2, h3) = heap_segment (a, b) heap) /\
-      (* h1 points only to itself and references *)
-      (!ptr xs l d u.
-        MEM (DataElement xs l d) h1 /\ MEM (Pointer ptr u) xs ==>
-          (ptr < a \/ ptr >= b)) /\
-      (* h1 contains no references *)
-      (!el. MEM el h1 ==> ~ (isRef el)) /\
-      (* h3 only contains references *)
-      (!el. MEM el h3 ==> isRef el)
-  `;
-
-
-
 (* split heap into two 0-a, a-limit *)
 val heap_split_def = Define `
   (heap_split 0 heap = ([], heap)) /\
@@ -141,6 +118,27 @@ val heap_segment_def = Define `
     in let l = heap_length h1
     in let (h2, h3) = heap_split (b - l) heap'
     in (h1, h2, h3)`;
+
+(* assume heap_ok? for now, yes *)
+(* old generations 0-a *)
+(* current generation a-b *)
+(* references b-limit *)
+(* add that all references h2 are at end?
+ * or perhaps, after gc move b left and then this holds *)
+val heap_gen_ok_def = Define `
+  heap_gen_ok (a, b) isRef heap limit =
+    ?h1 h2 h3.
+      (a < b) /\ (b <= limit) /\
+      ((h1, h2, h3) = heap_segment (a, b) heap) /\
+      (* h1 points only to itself and references *)
+      (!ptr xs l d u.
+        MEM (DataElement xs l d) h1 /\ MEM (Pointer ptr u) xs ==>
+          (ptr < a \/ ptr >= b)) /\
+      (* h1 contains no references *)
+      (!el. MEM el h1 ==> ~ (isRef el)) /\
+      (* h3 only contains references *)
+      (!el. MEM el h3 ==> isRef el)
+  `;
 
 (* The GC is a copying collector which moves elements *)
 
