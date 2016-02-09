@@ -100,6 +100,23 @@ val heap_ok_def = Define `
                     isSomeDataElement (heap_lookup ptr heap))`;
 (* add that all references are stored at the end of the heap *)
 
+(* split heap into two 0-a, a-limit *)
+val heap_split_def = Define `
+  (heap_split 0 heap = ([], heap)) /\
+  (heap_split a (el::heap) =
+    let l = el_length el
+    in if a < l
+    then ([], el::heap)
+    else let (h1, h2) = heap_split (a - l) heap
+    in (el::h1, h2))`;
+
+(* segment heap into three 0-a, a-b, b-limit *)
+(* where a-b should could be the young generation *)
+val heap_segment_def = Define `
+  heap_segment (a, b) heap =
+    let (h1, heap') = heap_split a heap
+    in let (h2, h3) = heap_split (b - a) heap'
+    in (h1, h2, h3)`;
 
 (* The GC is a copying collector which moves elements *)
 
