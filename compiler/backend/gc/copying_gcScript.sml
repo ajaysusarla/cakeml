@@ -81,9 +81,6 @@ val isDataElement_def = Define `
 val isSomeDataElement_def = Define `
   isSomeDataElement x = ?ys l d. x = SOME (DataElement ys l d)`;
 
-val isRef_def = Define `
-  isRef x = ?ys l d. x = DataElement ys l (RefTag, d)`;
-
 val heap_length_def = Define `
   heap_length heap = SUM (MAP el_length heap)`;
 
