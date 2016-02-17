@@ -151,27 +151,36 @@ val gc_forward_ptr_def = Define `
        let (xs,c) = gc_forward_ptr (a - el_length x) xs ptr d c in
          (x::xs,c))`;
 
+(* byt namn pa mina a o b *)
+(* lagg till en h3, och en siffra pa var h3 borjar *)
 val gc_move_def = Define `
-  (gc_move (Data d,h2,a,n,heap,c,limit) = (Data d,h2,a,n,heap,c)) /\
-  (gc_move (Pointer ptr d,h2,a,n,heap,c,limit) =
+  (gc_move isRef (Data d,h2,r1,a,n,heap,c,limit) = (Data d,h2,r1,a,n,heap,c)) /\
+  (gc_move isRef (Pointer ptr d,h2,r1,a,n,heap,c,limit) =
      case heap_lookup ptr heap of
-     (* put data last on new heap, put fwd pointer on old heap *)
-     (* a is end of new heap, where new element is stored *)
      | SOME (DataElement xs l dd) =>
-         let c = c /\ l+1 <= n /\ (a + n = limit) in
-         let n = n - (l+1) in
-         let h2 = h2 ++ [DataElement xs l dd] in
-         let (heap,c) = gc_forward_ptr ptr heap a d c in
-           (Pointer a d,h2,a + (l+1),n,heap,c)
+        if isRef (DataElement xs l d) then
+          (* put references towards end of heap *)
+          let c = c /\ l+1 <= n /\ (a + n = limit) in (* TODO: update *)
+          let n = n - (l + 1) in                      (* TODO: update *)
+          let r1 = (DataElement xs l dd) :: r1 in
+          let (heap, c) = gc_forward_ptr ptr heap a d c in
+            (Pointer a d, h2, r1, a + (l + 1), n, heap, c) (* TODO: updates *)
+        else
+          let c = c /\ l+1 <= n /\ (a + n = limit) in
+          let n = n - (l+1) in
+          let h2 = h2 ++ [DataElement xs l dd] in
+          let (heap,c) = gc_forward_ptr ptr heap a d c in
+            (Pointer a d,h2,r1,a + (l+1),n,heap,c)
      (* if fwd pointer use new address *)
-     | SOME (ForwardPointer ptr _ l) => (Pointer ptr d,h2,a,n,heap,c)
-     | _ => (ARB,h2,a,n,heap,F))`
+     | SOME (ForwardPointer ptr _ l) => (Pointer ptr d,h2,r1,a,n,heap,c)
+     | _ => (ARB,h2,r1,a,n,heap,F))`
 
+(* first argument are a list of pointers/data from 1 DataElement *)
 val gc_move_list_def = Define `
-  (gc_move_list ([],h2,a,n,heap,c,limit) = ([],h2,a,n,heap,c)) /\
-  (gc_move_list (x::xs,h2,a,n,heap,c,limit) =
-     let (x,h2,a,n,heap,c) = gc_move (x,h2,a,n,heap,c,limit) in
-     let (xs,h2,a,n,heap,c) = gc_move_list (xs,h2,a,n,heap,c,limit) in
+  (gc_move_list isRef ([],h2,a,n,heap,c,limit) = ([],h2,a,n,heap,c)) /\
+  (gc_move_list isRef (x::xs,h2,a,n,heap,c,limit) =
+     let (x,h2,a,n,heap,c) = gc_move isRef (x,h2,a,n,heap,c,limit) in
+     let (xs,h2,a,n,heap,c) = gc_move_list isRef (xs,h2,a,n,heap,c,limit) in
        (x::xs,h2,a,n,heap,c))`;
 
 val gc_move_loop_def = tDefine "gc_move_loop" `
