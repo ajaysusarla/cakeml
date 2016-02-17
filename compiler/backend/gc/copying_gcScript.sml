@@ -1,7 +1,4 @@
-open preamble;
-open wordsTheory;
-open wordsLib;
-open integer_wordTheory;
+open preamble wordsTheory wordsLib integer_wordTheory;
 
 val _ = new_theory "copying_gc";
 
@@ -130,18 +127,17 @@ val heap_segment_def = Define `
 (* or perhaps, after gc move b left and then this holds *)
 val heap_gen_ok_def = Define `
   heap_gen_ok (a, b) isRef heap limit =
+    (a <= b) /\ (b <= limit) /\
     ?h1 h2 h3.
-      (a < b) /\ (b <= limit) /\
       ((h1, h2, h3) = heap_segment (a, b) heap) /\
       (* h1 points only to itself and references *)
       (!ptr xs l d u.
         MEM (DataElement xs l d) h1 /\ MEM (Pointer ptr u) xs ==>
-          (ptr < a \/ ptr >= b)) /\
+          (ptr < a \/ b <= ptr)) /\
       (* h1 contains no references *)
       (!el. MEM el h1 ==> ~ (isRef el)) /\
       (* h3 only contains references *)
-      (!el. MEM el h3 ==> isRef el)
-  `;
+      (!el. MEM el h3 ==> isRef el)`;
 
 (* The GC is a copying collector which moves elements *)
 
