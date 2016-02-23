@@ -208,6 +208,7 @@ val gc_move_refs_def = Define `
     (h2,r4,r3++r1,a,n,r,heap,c)) /\
   (* move a ref *)
   (gc_move_refs isRef (h2,r4,r3,ref::r2,r1,a,n,r,heap,c,limit) =
+    if limit < heap_length (r4 ++ r4 ++ ref::r2 ++ r1) then (h2,r4,r1,a,n,r,heap,F) else (* TODO: this line? *)
       case ref of
       | DataElement xs l d =>
         let (xs,h2,r4,a,n,r,heap,c) = gc_move_list isRef (xs,h2,r4,a,n,r,heap,c,limit) in
@@ -216,7 +217,7 @@ val gc_move_refs_def = Define `
       | _ => (h2,r4,r1,a,n,r,heap,F))`;
 
 (* The main gc loop, calls gc_move_data and gc_move_ref *)
-val gc_move_loop_def = Define `
+val gc_move_loop_def = tDefine "gc_move_loop" `
   (* We are done, no data or references to move *)
   (gc_move_loop isRef (h1,[],[],r1,a,n,r,heap,c,limit) =
     (h1,r1,a,n,r,heap,c)) /\
@@ -229,12 +230,16 @@ val gc_move_loop_def = Define `
   (gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit) =
     let (h2,r2,r1,a,n,r,heap,c) =
       gc_move_refs isRef (h2,[],[],r2,r1,a,n,r,heap,c,limit) in
-    gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit))`;
+    gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit))`
+  cheat;
 
 (*
 WF_REL_TAC
-  `measure (\(_,h1,h2,r2,r1,a,n,r,heap,c,limit). limit - (heap_length h1 + heap_length r1))`
-SRW_TAC [] [heap_length_def,el_length_def,SUM_APPEND]
+  `measure (\(_,h1,h2,r2,r1,a,n,r,heap,c,limit). limit - heap_length h1 - heap_length r1)`
+
+SRW_TAC [] [gc_move_data_def,gc_move_refs_def,heap_length_def,el_length_def,SUM_APPEND]
+SRW_TAC [] [gc_move_data_def]
+fs [gc_move_data_ind]
 -- 4 goals, which all seem reasonable, want use definitions of move_data and move_refs?
 *)
 
