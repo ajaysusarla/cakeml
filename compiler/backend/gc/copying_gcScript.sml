@@ -231,7 +231,12 @@ val gc_move_loop_def = Define `
       gc_move_refs isRef (h2,[],[],r2,r1,a,n,r,heap,c,limit) in
     gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit))`;
 
-(* WF_REL_TAC `measure (\(_,h1,h2,r2,r1,a,n,r,heap,c,limit). limit - (heap_length h1 + heap_length r1))` *)
+(*
+WF_REL_TAC
+  `measure (\(_,h1,h2,r2,r1,a,n,r,heap,c,limit). limit - (heap_length h1 + heap_length r1))`
+SRW_TAC [] [heap_length_def,el_length_def,SUM_APPEND]
+-- 4 goals, which all seem reasonable, want use definitions of move_data and move_refs?
+*)
 
 
 val heap_expand_def = Define `
