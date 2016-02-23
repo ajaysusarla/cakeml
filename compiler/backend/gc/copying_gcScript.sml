@@ -244,19 +244,20 @@ fs [gc_move_data_ind]
 *)
 
 
+
 val heap_expand_def = Define `
   heap_expand n = if n = 0 then [] else [Unused (n-1)]`;
 
 (* TODO: when we have generations add function partial_gc that this
 one calls with bounds that are 0 and limit *)
 val full_gc_def = Define `
-  full_gc (roots,heap,limit) =
+  full_gc isRef (roots,heap,limit) =
     let c0 = (heap_length heap = limit) in
-    let (roots,h2,a,n,heap,c) = gc_move_list (roots,[],0,limit,heap,T,limit) in
-    let (heap,a,n,temp,c) = gc_move_loop ([],h2,a,n,heap,c,limit) in
-    let c = (c /\ (a = heap_length heap) /\ (heap_length temp = limit) /\
-             c0 /\ (n = limit - a) /\ a <= limit) in
-      (roots,heap,a,c)`;
+    let (roots,h2,r2,a,n,r,heap,c) = gc_move_list isRef (roots,[],[],0,limit,0,heap,T,limit) in
+    let (h1,r1,a,n,r,temp,c) = gc_move_loop isRef ([],h2,r2,[],a,n,r,heap,c,limit) in
+    let c = (c /\ (a = heap_length h1) /\ (r = heap_length r1) /\ (heap_length temp = limit) /\
+             c0 /\ (n = limit - a - r) /\ a + r <= limit) in
+      (roots,h1,r1,a,r,c)`;
 
 (* Invariant *)
 
