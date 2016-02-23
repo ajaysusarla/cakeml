@@ -295,7 +295,7 @@ val heaps_similar_def = Define `
                      (el_length h = el_length h0) /\ isDataElement h0
                    else (h = h0)) heap0 heap`
 
-(* heap - old heap with fwd pointers *)
+(* heap - initial heap with fwd pointers *)
 (* heap0 - initial heap (unchanged) *)
 (* h1 are moved elements, h2 can contain pointers to old heap *)
 val gc_inv_def = Define `
