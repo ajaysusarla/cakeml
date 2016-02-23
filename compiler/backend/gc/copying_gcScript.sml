@@ -203,42 +203,36 @@ val gc_move_data_def = tDefine "gc_move_data" `
 (* r2 - references to move *)
 (* r1 - already done *)
 val gc_move_refs_def = Define `
-  (* no more refs to move *)
-  (gc_move_refs isRef (h2,[],r3,[],r1,a,n,r,heap,c,limit) =
-    (h2,r3++r1,a,n,r,heap,c)) /\
   (* maybe more refs (r4 could have more) *)
   (gc_move_refs isRef (h2,r4,r3,[],r1,a,n,r,heap,c,limit) =
-    gc_move_refs isRef (h2,[],[],r4,r3++r1,a,n,r,heap,c,limit)) /\
+    (h2,r4,r3++r1,a,n,r,heap,c)) /\
   (* move a ref *)
   (gc_move_refs isRef (h2,r4,r3,ref::r2,r1,a,n,r,heap,c,limit) =
-    if limit < heap_length (r3 ++ ref::r2 ++ r1) then (h2,r1,a,n,r,heap,F) else
       case ref of
       | DataElement xs l d =>
         let (xs,h2,r4,a,n,r,heap,c) = gc_move_list isRef (xs,h2,r4,a,n,r,heap,c,limit) in
         let r3 = r3 ++ [DataElement xs l d] in
           gc_move_refs isRef (h2,r4,r3,r2,r1,a,n,r,heap,c,limit)
-      | _ => (h2,r1,a,n,r,heap,F))`;
-
-(* WF_REL_TAC *)
-(*   `measure (\(_,h2,r4,r3,r2,r1,a,n,r,heap,c,limit). limit - (heap_length r1))` *)
-(* SRW_TAC [] [heap_length_def,el_length_def,SUM_APPEND] *)
-(* decide_tac *)
+      | _ => (h2,r4,r1,a,n,r,heap,F))`;
 
 (* The main gc loop, calls gc_move_data and gc_move_ref *)
 val gc_move_loop_def = Define `
   (* We are done, no data or references to move *)
-  (gc_move_loop isRef (h1, [], [], r1, a, n, heap, c, limit) =
-    (h1, r1, a, n, heap, c)) /\
+  (gc_move_loop isRef (h1,[],[],r1,a,n,r,heap,c,limit) =
+    (h1,r1,a,n,r,heap,c)) /\
   (* there is still data to move, but no references *)
-  (gc_move_loop isRef (h1, h2, [], r1, a, n, heap, c, limit) =
-    let (h1,r2,a,n,heap,c) =
-      gc_move_data isRef (h1, h2, [], a, n, heap, c, limit) in
-    gc_move_loop isRef (h1,[],r2,r1,a,n,heap,c) /\
+  (gc_move_loop isRef (h1,h2,[],r1,a,n,r,heap,c,limit) =
+    let (h1,r2,a,n,r,heap,c) =
+      gc_move_data isRef (h1,h2,[],a,n,r,heap,c,limit) in
+    gc_move_loop isRef (h1,[],r2,r1,a,n,r,heap,c,limit)) /\
   (* there are still references to move and possibly data *)
-  (gc_move_loop isRef (h1, h2, r2, r1, a, n, heap, c, limit) =
-    let (h2,r2,r1,a,n,heap,c) =
-      gc_move_refs isRef (h2, [], [], r2, r1, a,n,heap,c,limit) in
-    gc_move_loop isRef (h1,h2,r2,r1,a,n,heap,c))`;
+  (gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit) =
+    let (h2,r2,r1,a,n,r,heap,c) =
+      gc_move_refs isRef (h2,[],[],r2,r1,a,n,r,heap,c,limit) in
+    gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit))`;
+
+(* WF_REL_TAC `measure (\(_,h1,h2,r2,r1,a,n,r,heap,c,limit). limit - (heap_length h1 + heap_length r1))` *)
+
 
 val heap_expand_def = Define `
   heap_expand n = if n = 0 then [] else [Unused (n-1)]`;
