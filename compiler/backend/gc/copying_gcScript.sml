@@ -208,7 +208,7 @@ val gc_move_refs_def = Define `
     (h2,r4,r3++r1,a,n,r,heap,c)) /\
   (* move a ref *)
   (gc_move_refs isRef (h2,r4,r3,ref::r2,r1,a,n,r,heap,c,limit) =
-    if limit < heap_length (r4 ++ r4 ++ ref::r2 ++ r1) then (h2,r4,r1,a,n,r,heap,F) else (* TODO: this line? *)
+   (*  if limit < heap_length (r4 ++ r4 ++ ref::r2 ++ r1) then (h2,r4,r1,a,n,r,heap,F) else (* TODO: this line? *) *)
       case ref of
       | DataElement xs l d =>
         let (xs,h2,r4,a,n,r,heap,c) = gc_move_list isRef (xs,h2,r4,a,n,r,heap,c,limit) in
@@ -217,21 +217,21 @@ val gc_move_refs_def = Define `
       | _ => (h2,r4,r1,a,n,r,heap,F))`;
 
 (* The main gc loop, calls gc_move_data and gc_move_ref *)
-val gc_move_loop_def = tDefine "gc_move_loop" `
-  (* We are done, no data or references to move *)
-  (gc_move_loop isRef (h1,[],[],r1,a,n,r,heap,c,limit) =
-    (h1,r1,a,n,r,heap,c)) /\
-  (* there is still data to move, but no references *)
-  (gc_move_loop isRef (h1,h2,[],r1,a,n,r,heap,c,limit) =
-    let (h1,r2,a,n,r,heap,c) =
-      gc_move_data isRef (h1,h2,[],a,n,r,heap,c,limit) in
-    gc_move_loop isRef (h1,[],r2,r1,a,n,r,heap,c,limit)) /\
-  (* there are still references to move and possibly data *)
-  (gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit) =
-    let (h2,r2,r1,a,n,r,heap,c) =
-      gc_move_refs isRef (h2,[],[],r2,r1,a,n,r,heap,c,limit) in
-    gc_move_loop isRef (h1,h2,r2,r1,a,n,r,heap,c,limit))`
-  cheat;
+val gc_move_loop_def = Define `
+  gc_move_loop isRef (clock:num) (h1,h2,r2,r1,a,n,r,heap,c,limit) =
+    if clock = 0 then (h1,r1,a,n,r,heap,F) else
+      case (h2,r2) of
+      | ([],[]) => (h1,r1,a,n,r,heap,c)
+      | (h2,[]) => let (h1,r2,a,n,r,heap,c) =
+                     gc_move_data isRef (h1,h2,[],a,n,r,heap,c,limit) in
+                   gc_move_loop isRef (clock-1) (h1,[],r2,r1,a,n,r,heap,c,limit)
+      | (h2,r2) => let (h2,r2,r1,a,n,r,heap,c) =
+                     gc_move_refs isRef (h2,[],[],r2,r1,a,n,r,heap,c,limit) in
+                   gc_move_loop isRef (clock-1) (h1,h2,r2,r1,a,n,r,heap,c,limit)`
+
+(* Magnus: I've made the gc_move_loop clocked to make the termination
+           proof obvious. This clock can also become handy in the
+           refinement proofs later on (in other files). *)
 
 (*
 WF_REL_TAC
@@ -243,8 +243,6 @@ fs [gc_move_data_ind]
 -- 4 goals, which all seem reasonable, want use definitions of move_data and move_refs?
 *)
 
-
-
 val heap_expand_def = Define `
   heap_expand n = if n = 0 then [] else [Unused (n-1)]`;
 
@@ -254,7 +252,7 @@ val full_gc_def = Define `
   full_gc isRef (roots,heap,limit) =
     let c0 = (heap_length heap = limit) in
     let (roots,h2,r2,a,n,r,heap,c) = gc_move_list isRef (roots,[],[],0,limit,0,heap,T,limit) in
-    let (h1,r1,a,n,r,temp,c) = gc_move_loop isRef ([],h2,r2,[],a,n,r,heap,c,limit) in
+    let (h1,r1,a,n,r,temp,c) = gc_move_loop isRef limit ([],h2,r2,[],a,n,r,heap,c,limit) in
     let c = (c /\ (a = heap_length h1) /\ (r = heap_length r1) /\ (heap_length temp = limit) /\
              c0 /\ (n = limit - a - r) /\ a + r <= limit) in
       (roots,h1,r1,a,r,c)`;
