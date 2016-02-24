@@ -233,18 +233,9 @@ val gc_move_loop_def = Define `
            proof obvious. This clock can also become handy in the
            refinement proofs later on (in other files). *)
 
-(*
-WF_REL_TAC
-  `measure (\(_,h1,h2,r2,r1,a,n,r,heap,c,limit). limit - heap_length h1 - heap_length r1)`
-
-SRW_TAC [] [gc_move_data_def,gc_move_refs_def,heap_length_def,el_length_def,SUM_APPEND]
-SRW_TAC [] [gc_move_data_def]
-fs [gc_move_data_ind]
--- 4 goals, which all seem reasonable, want use definitions of move_data and move_refs?
-*)
-
 val heap_expand_def = Define `
   heap_expand n = if n = 0 then [] else [Unused (n-1)]`;
+
 
 (* TODO: when we have generations add function partial_gc that this
 one calls with bounds that are 0 and limit *)
@@ -296,27 +287,32 @@ val heaps_similar_def = Define `
                    else (h = h0)) heap0 heap`
 
 (* heap - initial heap with fwd pointers *)
-(* heap0 - initial heap (unchanged) *)
+(* heap0 - initial heap, unchanged *)
 (* h1 are moved elements, h2 can contain pointers to old heap *)
 val gc_inv_def = Define `
-  gc_inv (h1,h2,a,n,heap,c,limit) heap0 =
-    (a + n = limit) /\
+  gc_inv (h1,h2,r2,r1,a,n,r,heap,c,limit) heap0 =
+    (a + n + r = limit) /\
     (a = heap_length (h1 ++ h2)) /\
-    (n = heap_length (FILTER (\h. ~(isForwardPointer h)) heap)) /\ c /\
+    (r = heap_length (r2 ++ r1)) /\
+    (* empty space in new heap = empty + reclaimed space in old heap *)
+    (n = heap_length (FILTER (\h. ~(isForwardPointer h)) heap)) /\
+    c /\
     (heap_length heap = limit) /\
     (* the initial heap is well-formed *)
     heap_ok heap0 limit /\
-    (* the initial heap is related to the current heap *)
+    (* ForwardPointers have the correct size *)
     heaps_similar heap0 heap /\
-    (* the new heap consists of only DataElements *)
+    (* the new heap consists of DataElements *)
     EVERY isDataElement h1 /\ EVERY isDataElement h2 /\
+    EVERY isDataElement r1 /\ EVERY isDataElement r2 /\
     (* the forward pointers consitute a bijection into the new heap *)
     BIJ (heap_map1 heap) (FDOM (heap_map 0 heap)) (heap_addresses 0 (h1 ++ h2)) /\
     !i j. (FLOOKUP (heap_map 0 heap) i = SOME j) ==>
           ?xs l d. (heap_lookup i heap0 = SOME (DataElement xs l d)) /\
                    (heap_lookup j (h1++h2) =
-                     SOME (DataElement (if j < heap_length h1 then
-                                          ADDR_MAP (heap_map1 heap) xs else xs) l d)) /\
+                     SOME (DataElement
+                             (if j < heap_length h1 then ADDR_MAP (heap_map1 heap) xs else xs)
+                             l d)) /\
                    !ptr d. MEM (Pointer ptr d) xs /\ j < heap_length h1 ==>
                            ptr IN FDOM (heap_map 0 heap)`;
 
