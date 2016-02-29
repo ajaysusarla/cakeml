@@ -291,6 +291,8 @@ val heaps_similar_def = Define `
 (* h1 are moved elements, h2 can contain pointers to old heap *)
 val gc_inv_def = Define `
   gc_inv (h1,h2,r2,r1,a,n,r,heap,c,limit) heap0 =
+    (* heap' = current heap *)
+    let heap' = h1 ++ h2 ++ heap_expand n ++ r2 ++ r1 in
     (a + n + r = limit) /\
     (a = heap_length (h1 ++ h2)) /\
     (r = heap_length (r2 ++ r1)) /\
@@ -305,16 +307,22 @@ val gc_inv_def = Define `
     (* the new heap consists of DataElements *)
     EVERY isDataElement h1 /\ EVERY isDataElement h2 /\
     EVERY isDataElement r1 /\ EVERY isDataElement r2 /\
-    (* the forward pointers consitute a bijection into the new heap *)
-    BIJ (heap_map1 heap) (FDOM (heap_map 0 heap)) (heap_addresses 0 (h1 ++ h2)) /\
+    (* forward pointers consitute a bijection into the new heap *)
+    BIJ (heap_map1 heap) (FDOM (heap_map 0 heap)) (heap_addresses 0 heap') /\
+    (* HEJ *)
     !i j. (FLOOKUP (heap_map 0 heap) i = SOME j) ==>
-          ?xs l d. (heap_lookup i heap0 = SOME (DataElement xs l d)) /\
-                   (heap_lookup j (h1++h2) =
-                     SOME (DataElement
-                             (if j < heap_length h1 then ADDR_MAP (heap_map1 heap) xs else xs)
-                             l d)) /\
-                   !ptr d. MEM (Pointer ptr d) xs /\ j < heap_length h1 ==>
-                           ptr IN FDOM (heap_map 0 heap)`;
+       ?xs l d.
+         (heap_lookup i heap0 = SOME (DataElement xs l d)) /\
+         (heap_lookup j heap' =
+           SOME (DataElement
+                  (if j < heap_length h1 \/ limit <= j + heap_length r1
+                   then ADDR_MAP (heap_map1 heap) xs
+                   else xs) (* maybe element j is already moved *)
+                  l d)) /\
+         !ptr d.
+           MEM (Pointer ptr d) xs /\
+           (j < heap_length h1 \/ limit <= j + heap_length r1) ==>
+           ptr IN FDOM (heap_map 0 heap)`;
 
 (* Invariant maintained *)
 
