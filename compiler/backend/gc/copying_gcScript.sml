@@ -165,7 +165,7 @@ val gc_move_def = Define `
           let n = n - (l + 1) in                      (* TODO: update *)
           let r2 = (DataElement xs l dd) :: r2 in
           let (heap, c) = gc_forward_ptr ptr heap r d c in
-            (Pointer r d,h2,r2,a,n,r-(l+1),heap, c)
+            (Pointer r d,h2,r2,a,n,r+(l+1),heap, c)
         else
           (* put data in h2 *)
           let c = c /\ l+1 <= n /\ (a + n + r = limit) in
@@ -208,7 +208,6 @@ val gc_move_refs_def = Define `
     (h2,r4,r3++r1,a,n,r,heap,c)) /\
   (* move a ref *)
   (gc_move_refs isRef (h2,r4,r3,ref::r2,r1,a,n,r,heap,c,limit) =
-   (*  if limit < heap_length (r4 ++ r4 ++ ref::r2 ++ r1) then (h2,r4,r1,a,n,r,heap,F) else (* TODO: this line? *) *)
       case ref of
       | DataElement xs l d =>
         let (xs,h2,r4,a,n,r,heap,c) = gc_move_list isRef (xs,h2,r4,a,n,r,heap,c,limit) in
@@ -310,18 +309,19 @@ val gc_inv_def = Define `
     (* forward pointers consitute a bijection into the new heap *)
     BIJ (heap_map1 heap) (FDOM (heap_map 0 heap)) (heap_addresses 0 heap') /\
     (* HEJ *)
+    let h1p = heap_length h1 in
+    let r1p = limit - heap_length r1 in
     !i j. (FLOOKUP (heap_map 0 heap) i = SOME j) ==>
        ?xs l d.
          (heap_lookup i heap0 = SOME (DataElement xs l d)) /\
          (heap_lookup j heap' =
            SOME (DataElement
-                  (if j < heap_length h1 \/ limit <= j + heap_length r1
+                  (if j < h1p \/ r1p <= j
                    then ADDR_MAP (heap_map1 heap) xs
                    else xs) (* maybe element j is already moved *)
                   l d)) /\
          !ptr d.
-           MEM (Pointer ptr d) xs /\
-           (j < heap_length h1 \/ limit <= j + heap_length r1) ==>
+           MEM (Pointer ptr d) xs /\ (j < h1p \/ r1p <= j) ==>
            ptr IN FDOM (heap_map 0 heap)`;
 
 (* Invariant maintained *)
