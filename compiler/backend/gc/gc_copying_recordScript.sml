@@ -654,44 +654,53 @@ val gc_move_thm = prove(
   (* \\ full_simp_tac std_ss [FAPPLY_FUPDATE_THM] \\ metis_tac []); *)
 
 val gc_move_list_thm = prove(
-  ``!xs h2 a n heap c.
-    gc_inv (h1,h2,a,n,heap:('a,'b) heap_element list,c,limit) heap0 /\
+  ``!xs h2.
+    (state.h2 = h2) /\
+    gc_inv conf state heap0 /\
     (!ptr u. MEM (Pointer ptr u) (xs:'a heap_address list) ==>
-             isSomeDataOrForward (heap_lookup ptr heap)) ==>
-    ?h23 a3 n3 heap3 c3.
-      (gc_move_list (xs,h2,a,n,heap,c,limit) =
-        (ADDR_MAP (heap_map1 heap3) xs,h23,a3,n3,heap3,c3)) /\
+             isSomeDataOrForward (heap_lookup ptr state.heap)) ==>
+    ?h23 r23 a3 n3 r3 heap3 c3.
+      let state' =
+        state with
+          <| h2 := h23; r2 := r23; heap := heap3; a := a3; n := n3; r := r3; c := c3 |> in
+      (gc_move_list conf state xs =
+        (ADDR_MAP (heap_map1 heap3) xs,state')) /\
       (!ptr u. MEM (Pointer ptr u) xs ==> ptr IN FDOM (heap_map 0 heap3)) /\
       (!ptr. isSomeDataOrForward (heap_lookup ptr heap) =
              isSomeDataOrForward (heap_lookup ptr heap3)) /\
       ((heap_map 0 heap) SUBMAP (heap_map 0 heap3)) /\
-      gc_inv (h1,h23,a3,n3,heap3,c3,limit) heap0``,
-  Induct THEN1 (full_simp_tac std_ss [gc_move_list_def,ADDR_MAP_def,MEM,SUBMAP_REFL])
-  \\ full_simp_tac std_ss [MEM,gc_move_list_def,LET_DEF] \\ rpt strip_tac
-  \\ Q.ABBREV_TAC `x = h` \\ pop_assum (K all_tac)
-  \\ mp_tac gc_move_thm \\ full_simp_tac std_ss []
-  \\ match_mp_tac IMP_IMP \\ strip_tac THEN1 (rw [] \\ fs [])
-  \\ strip_tac \\ full_simp_tac std_ss []
-  \\ first_assum (mp_tac o Q.SPECL [`h23`,`a3`,`n3`,`heap3`,`c3`])
-  \\ match_mp_tac IMP_IMP \\ strip_tac THEN1 (rw [] \\ fs [] \\ metis_tac [])
-  \\ full_simp_tac std_ss [] \\ strip_tac \\ full_simp_tac std_ss []
-  \\ imp_res_tac SUBMAP_TRANS \\ full_simp_tac std_ss []
-  \\ strip_tac THEN1
-   (Cases_on `x` \\ full_simp_tac (srw_ss()) [ADDR_APPLY_def,ADDR_MAP_def]
-    \\ full_simp_tac std_ss [heap_map1_def,SUBMAP_DEF])
-  \\ full_simp_tac std_ss [SUBMAP_DEF] \\ metis_tac []);
+      gc_inv conf state' heap0``,
+  cheat);
+  (* Induct THEN1 (full_simp_tac std_ss [gc_move_list_def,ADDR_MAP_def,MEM,SUBMAP_REFL]) *)
+  (* \\ full_simp_tac std_ss [MEM,gc_move_list_def,LET_DEF] \\ rpt strip_tac *)
+  (* \\ Q.ABBREV_TAC `x = h` \\ pop_assum (K all_tac) *)
+  (* \\ mp_tac gc_move_thm \\ full_simp_tac std_ss [] *)
+  (* \\ match_mp_tac IMP_IMP \\ strip_tac THEN1 (rw [] \\ fs []) *)
+  (* \\ strip_tac \\ full_simp_tac std_ss [] *)
+  (* \\ first_assum (mp_tac o Q.SPECL [`h23`,`a3`,`n3`,`heap3`,`c3`]) *)
+  (* \\ match_mp_tac IMP_IMP \\ strip_tac THEN1 (rw [] \\ fs [] \\ metis_tac []) *)
+  (* \\ full_simp_tac std_ss [] \\ strip_tac \\ full_simp_tac std_ss [] *)
+  (* \\ imp_res_tac SUBMAP_TRANS \\ full_simp_tac std_ss [] *)
+  (* \\ strip_tac THEN1 *)
+  (*  (Cases_on `x` \\ full_simp_tac (srw_ss()) [ADDR_APPLY_def,ADDR_MAP_def] *)
+  (*   \\ full_simp_tac std_ss [heap_map1_def,SUBMAP_DEF]) *)
+  (* \\ full_simp_tac std_ss [SUBMAP_DEF] \\ metis_tac []); *)
 
 val APPEND_NIL_LEMMA = METIS_PROVE [APPEND_NIL] ``?xs1. xs = xs ++ xs1:'a list``
 
 val gc_move_ALT = store_thm("gc_move_ALT",
-  ``gc_move (ys,xs,a,n,heap,c,limit) =
-      let (ys,xs1,x) = gc_move (ys,[],a,n,heap,c,limit) in
-        (ys,xs++xs1,x)``,
-  Cases_on `ys` \\ simp_tac (srw_ss()) [gc_move_def] \\ rpt strip_tac
-  \\ Cases_on `heap_lookup n' heap` \\ simp_tac (srw_ss()) [LET_DEF]
-  \\ Cases_on `x` \\ simp_tac (srw_ss()) [LET_DEF]
-  \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ full_simp_tac std_ss []);
+  ``gc_move conf (state with <| h2 := xs |>) ys =
+     let (ys, state') = gc_move conf (state with <| h2 := [] |>) ys in
+       (ys, state with <| h2 := xs ++ state'.h2 |>)``,
+  cheat);
+  (* ``gc_move conf state (ys,xs,a,n,heap,c,limit) = *)
+  (*     let (ys,xs1,x) = gc_move (ys,[],a,n,heap,c,limit) in *)
+  (*       (ys,xs++xs1,x)``, *)
+  (* Cases_on `ys` \\ simp_tac (srw_ss()) [gc_move_def] \\ rpt strip_tac *)
+  (* \\ Cases_on `heap_lookup n' heap` \\ simp_tac (srw_ss()) [LET_DEF] *)
+  (* \\ Cases_on `x` \\ simp_tac (srw_ss()) [LET_DEF] *)
+  (* \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) *)
+  (* \\ full_simp_tac std_ss []); *)
 
 val gc_move_list_ALT = store_thm("gc_move_list_ALT",
   ``!ys xs a n heap c limit ys3 xs3 a3 n3 heap3 c3.
