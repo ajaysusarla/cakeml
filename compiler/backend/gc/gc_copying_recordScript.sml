@@ -656,23 +656,25 @@ val gc_move_thm = prove(
   (* \\ full_simp_tac std_ss [FAPPLY_FUPDATE_THM] \\ metis_tac []); *)
 
 val gc_move_list_thm = prove(
-  ``!xs h2.
-    (state.h2 = h2) /\
+  ``!xs state. (* h2. *)
     gc_inv conf state heap0 /\
     (!ptr u. MEM (Pointer ptr u) (xs:'a heap_address list) ==>
              isSomeDataOrForward (heap_lookup ptr state.heap)) ==>
-    ?h23 r23 a3 n3 r3 heap3 c3.
-      let state' =
-        state with
-          <| h2 := h23; r2 := r23; heap := heap3; a := a3; n := n3; r := r3; c := c3 |> in
+    ?state'. (* h23 r23 a3 n3 r3 heap3 c3. *)
       (gc_move_list conf state xs =
-        (ADDR_MAP (heap_map1 heap3) xs,state')) /\
-      (!ptr u. MEM (Pointer ptr u) xs ==> ptr IN FDOM (heap_map 0 heap3)) /\
-      (!ptr. isSomeDataOrForward (heap_lookup ptr heap) =
-             isSomeDataOrForward (heap_lookup ptr heap3)) /\
-      ((heap_map 0 heap) SUBMAP (heap_map 0 heap3)) /\
+        (ADDR_MAP (heap_map1 state'.heap) xs,state')) /\
+      (!ptr u. MEM (Pointer ptr u) xs ==> ptr IN FDOM (heap_map 0 state'.heap)) /\
+      (!ptr. isSomeDataOrForward (heap_lookup ptr state.heap) =
+             isSomeDataOrForward (heap_lookup ptr state'.heap)) /\
+      ((heap_map 0 state.heap) SUBMAP (heap_map 0 state'.heap)) /\
       gc_inv conf state' heap0``,
-  cheat);
+
+Induct
+THEN1 fs [gc_move_list_def,ADDR_MAP_def]
+\\ fs [gc_move_list_def]
+\\ rpt strip_tac
+
+  \\ cheat);
   (* Induct THEN1 (full_simp_tac std_ss [gc_move_list_def,ADDR_MAP_def,MEM,SUBMAP_REFL]) *)
   (* \\ full_simp_tac std_ss [MEM,gc_move_list_def,LET_DEF] \\ rpt strip_tac *)
   (* \\ Q.ABBREV_TAC `x = h` \\ pop_assum (K all_tac) *)
@@ -889,15 +891,17 @@ val gc_inv_init = prove(
 (* next? *)
 val full_gc_thm = store_thm("full_gc_thm",
   ``roots_ok roots heap /\ heap_ok (heap:('a,'b) heap_element list) conf.limit ==>
-      ?heap' h1 r1 a r.
+      ?state.
         (full_gc conf (roots : 'a heap_address list,heap) =
-          (ADDR_MAP (heap_map1 heap') roots,h1,r1,a,r,T)) /\
+          (ADDR_MAP (heap_map1 state.heap) roots,state.h1,state.h1,state.a,state.r,T)) /\
         (!ptr u. MEM (Pointer ptr u) roots ==> ptr IN FDOM (heap_map 0 state.heap)) /\
         gc_inv conf state heap``,
 
-  rpt strip_tac \\
-  imp_res_tac gc_inv_init \\
   fs [full_gc_def]
+  \\ rpt strip_tac
+
+
+  (* \\ imp_res_tac gc_inv_init *)
 
   \\ cheat);
 
