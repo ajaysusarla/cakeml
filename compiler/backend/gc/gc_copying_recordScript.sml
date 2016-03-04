@@ -1113,7 +1113,8 @@ val gc_move_list_ok = store_thm("gc_move_list_ok",
   (* \\ once_rewrite_tac [EQ_SYM_EQ] \\ simp_tac std_ss [] \\ res_tac *)
   (* \\ imp_res_tac gc_move_ok \\ metis_tac []); *)
 
-(* TODO *)
+(* Let's only prove the following once they are needed.
+
 val th =
   fetch "-" "gc_move_loop_ind" |>
   Q.SPEC `(\(h1,h2,a,n,heap,c,limit).
@@ -1121,7 +1122,6 @@ val th =
        (gc_move_loop (h1,h2,a,n,heap,c,limit) = (h1',a',n',heap',T)) ==>
        c)`
 
-(* TODO *)
 val lemma = prove(th |> concl |> dest_imp |> fst,
   rpt strip_tac \\ simp_tac std_ss [gc_move_loop_def]
   \\ rpt strip_tac \\ pop_assum mp_tac
@@ -1137,7 +1137,6 @@ val lemma = prove(th |> concl |> dest_imp |> fst,
   \\ asm_rewrite_tac [] \\ simp_tac std_ss [LET_DEF] \\ rpt strip_tac
   \\ res_tac \\ full_simp_tac std_ss [] \\ imp_res_tac gc_move_list_ok);
 
-(* TODO *)
 val th = MP th lemma |> SIMP_RULE std_ss []
          |> Q.SPECL [`h1`,`h2`,`a`,`n`,`heap`,`c`,`limit`,`h1'`,`a'`,`n'`,`heap'`]
 
@@ -1162,5 +1161,7 @@ val full_gc_IMP_LENGTH = store_thm("full_gc_IMP_LENGTH",
   fs [full_gc_def,LET_THM]
   \\ rpt (split_pair_tac \\ fs []) \\ rw []
   \\ imp_res_tac gc_move_list_IMP_LENGTH \\ fs []);
+
+*)
 
 val _ = export_theory();
